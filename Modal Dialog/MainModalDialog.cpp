@@ -1,5 +1,8 @@
 ﻿#include "MainModalDialog.h"
 #include "AdditionalModalDialog.h"
+#include <string>
+#include <tchar.h>
+#include <fstream>
 
 #pragma comment(linker,"\"/manifestdependency:type='win32' \
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
@@ -43,7 +46,7 @@ void CMainModalDialog::Cls_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeN
 		INT_PTR result = DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_DIALOG2), hwnd, CAdditionalModalDialog::DlgProc);
 		if(result == IDOK)
 		{
-			//
+
 
 		}
 	}

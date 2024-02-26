@@ -1,107 +1,118 @@
-﻿#include "AdditionalModalDialog.h"
+﻿
+#include "AdditionalModalDialog.h"
 
-CAdditionalModalDialog* CAdditionalModalDialog::ptr = NULL;
+SignUpDlg* SignUpDlg::ptr = NULL;
 
-CAdditionalModalDialog::CAdditionalModalDialog(void)
-{
+SignUpDlg::SignUpDlg(void) {
 	ptr = this;
 }
-
-CAdditionalModalDialog::CAdditionalModalDialog(LPCTSTR lpStr)
-{
+SignUpDlg::SignUpDlg(LPCTSTR lpStr) {
 	ptr = this;
-	_tcscpy(text, lpStr);
+	//TEXTcscpy(text, lpStr);
 }
 
-CAdditionalModalDialog::~CAdditionalModalDialog(void)
-{
-
+SignUpDlg::~SignUpDlg() {
 }
 
-void CAdditionalModalDialog::Cls_OnClose(HWND hwnd)
-{
+void SignUpDlg::Cls_OnClose(HWND hwnd) {
 	EndDialog(hwnd, IDCANCEL);
 }
 
-BOOL CAdditionalModalDialog::Cls_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam) 
-{
-	hEdit = GetDlgItem(hwnd, IDC_EDIT1);
-	hEdit3 = GetDlgItem(hwnd, IDC_EDIT3);
-	hEdit4 = GetDlgItem(hwnd, IDC_EDIT4);
-	hEdit5 = GetDlgItem(hwnd, IDC_EDIT5);
-	hStatic = GetDlgItem(hwnd, IDC_STATIC1);
-	SetWindowText(hStatic, text);
-	SetWindowText(hwnd, TEXT("Регистрация"));
-	SetWindowText(hEdit, TEXT("Введите свой логин"));
+BOOL SignUpDlg::Cls_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam) {
+	for (int i = 0; i < numInputSign; i++) {
+		hEditSignUp[i] = GetDlgItem(hwnd, inputIdsSignUp[i]);
+	}
+
+	hButtonSignUp = GetDlgItem(hwnd, IDOK);
+
 	return TRUE;
 }
 
+void SignUpDlg::Cls_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify) {
+	if (IDOK == id) {
+		TCHAR buff[256] = TEXT("");
+		int length = SendMessage(hEditSignUp[3], WM_GETTEXTLENGTH, 0, 0);
+		GetWindowText(hEditSignUp[3], buff, length + 1);
 
-void CAdditionalModalDialog::Cls_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
-{
-	if(id == IDOK)
-	{
-		TCHAR buffer[200];
-		GetWindowText(hEdit, buffer, 200);
-		_tcscpy(text, buffer);
-		HWND hParent = GetParent(hwnd);
-		SetWindowText(hParent, TEXT("Ïðèâåò îò äî÷åðíåãî îêíà!"));
-		EndDialog(hwnd, IDOK);
+		if (!isLoginExist(hwnd, buff)) {
+			int index = MessageBox(hwnd, TEXT("Õîòèòå àâòîðèçîâàòüñÿ?"), TEXT("Òàêîé ëîãèí óæå åñòü!"), MB_YESNO);
 
-		LPCWSTR fileName = L"example.txt";
+			if (index == IDYES) {
+				SignUpDlg dlg;
+				INT_PTR result = DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_DIALOG3), hwnd, SignUpDlg::DlgProc);
+			}
 
-		// Открытие или создание файла для записи
-		HANDLE hFile = CreateFile(
-			fileName,             
-			GENERIC_WRITE,        
-			0,                    
-			NULL,                 
-			CREATE_ALWAYS,        
-			FILE_ATTRIBUTE_NORMAL, 
-			NULL                 
-		);
-
-		if (hFile == INVALID_HANDLE_VALUE) 
-		{
-			MessageBox(NULL, L"Не удалось создать файл", L"Ошибка", MB_OK | MB_ICONERROR);
-			
+			return;
 		}
 
+		ifstream out(TEXT("info.txt"));
 
-		TCHAR data[556];
-		DWORD bytesWritten;
+		for (int i = 0; i < numInputSign; i++) {
+			length = SendMessage(hEditSignUp[i], WM_GETTEXTLENGTH, 0, 0);
 
-			GetWindowText(hEdit, data, 12);
-			WriteFile(hFile, data, sizeof(data), &bytesWritten, NULL);
+			if (length == 0) {
+				MessageBox(hwnd, TEXT("Çàïîëíèòå âñå ïîëÿ!"), TEXT("Ïðåäóïðåæäåíèå!"), 0);
+				break;
+			}
 
-			GetWindowText(hEdit3, data, 12);
-			WriteFile(hFile, data, sizeof(data), &bytesWritten, NULL);
+			GetWindowText(hEditSignUp[i], buff, length + 1);
 
-			GetWindowText(hEdit4, data, 24);
-			WriteFile(hFile, data, sizeof(data), &bytesWritten, NULL);
-
-			GetWindowText(hEdit5, data, 12);
-			WriteFile(hFile, data, sizeof(data), &bytesWritten, NULL);
-		
-
-		// Закрытие файла
-		CloseHandle(hFile);
-
-		MessageBox(NULL, L"Файл успешно создан", L"Информация", MB_OK | MB_ICONINFORMATION);
-	}
-	else if(id == IDCANCEL)
-	{
-		EndDialog(hwnd, IDCANCEL);
+			i == 0 ? out << "[ " << buff << " | " :
+				i != numInputSign - 1 ? out << buff << " | " :
+				out << buff << " ]\n";
+		}
 	}
 }
 
-BOOL CALLBACK CAdditionalModalDialog::DlgProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	switch(message)
-	{
+INT_PTR CALLBACK SignUpDlg::DlgProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+	switch (message) {
 		HANDLE_MSG(hwnd, WM_CLOSE, ptr->Cls_OnClose);
 		HANDLE_MSG(hwnd, WM_INITDIALOG, ptr->Cls_OnInitDialog);
 		HANDLE_MSG(hwnd, WM_COMMAND, ptr->Cls_OnCommand);
 	}
+
 	return FALSE;
+}
+
+bool SignUpDlg::isLoginExist(HWND hwnd, const TCHAR* login) {
+	ifstream in("info.txt");
+
+	const int max_size = 255;
+	int counter = 0;
+
+	wstring temp[4];
+	wstring tempChar;
+	int index = 0;
+
+	TCHAR buff[max_size] = TEXT("");
+
+	do {
+		in >> buff[index];
+
+		if (buff[index] == ']') {
+			buff[index + 1] = '\0';
+
+			for (int j = 0; j < wcslen(buff); j++) {
+				if (buff[j] != ' ' && buff[j] != '[' && buff[j] != '|' && buff[j] != ']') {
+					tempChar += buff[j];
+				}
+				else if (buff[j] == '|') {
+					temp[counter++] = tempChar;
+					tempChar = TEXT("");
+				}
+			}
+
+			tempChar = TEXT("");
+			counter = 0;
+			index = 0;
+		}
+		else {
+			index++;
+		}
+
+		if (wcscmp(login, temp[3].c_str()) == 0)
+			return false;
+	} while (in);
+
+	return true;
 }
