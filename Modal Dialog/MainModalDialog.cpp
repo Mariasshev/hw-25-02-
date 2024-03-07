@@ -4,72 +4,144 @@
 #include <tchar.h>
 #include <fstream>
 
+
+//регистрация
+
 #pragma comment(linker,"\"/manifestdependency:type='win32' \
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
+signUpDlg* signUpDlg::ptr = NULL;
 
-CMainModalDialog* CMainModalDialog::ptr = NULL;
-
-CMainModalDialog::CMainModalDialog(void)
+signUpDlg::signUpDlg(void) 
+{
+	ptr = this;
+}
+signUpDlg::signUpDlg(LPCTSTR lpStr) 
 {
 	ptr = this;
 }
 
-CMainModalDialog::~CMainModalDialog(void)
+signUpDlg::~signUpDlg() 
 {
-
 }
 
-void CMainModalDialog::Cls_OnClose(HWND hwnd)
+void signUpDlg::Cls_OnClose(HWND hwnd) 
 {
 	EndDialog(hwnd, IDCANCEL);
 }
 
-BOOL CMainModalDialog::Cls_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam) 
+BOOL signUpDlg::Cls_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam) 
 {
-	hEdit1 = GetDlgItem(hwnd, IDC_EDIT1);
-	hStatic1 = GetDlgItem(hwnd, IDC_STATIC1);
-	hEdit2 = GetDlgItem(hwnd, IDC_EDIT2);
-	hStatic2 = GetDlgItem(hwnd, IDC_STATIC2);
-	SetWindowText(hEdit1, TEXT("1!"));
-	SetWindowText(hEdit2, TEXT("2!"));
+	for (int i = 0; i < numEdit; i++) 
+	{
+		hEditSignUp[i] = GetDlgItem(hwnd, inputIdsSignUp[i]);
+	}
+
+	hButtonSignUp = GetDlgItem(hwnd, IDOK);
+
 	return TRUE;
 }
 
-
-void CMainModalDialog::Cls_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
+void signUpDlg::Cls_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify) 
 {
-	if(id == IDC_BUTTON1)
+	if (IDOK == id) 
 	{
-		CAdditionalModalDialog dlg;
-		INT_PTR result = DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_DIALOG2), hwnd, CAdditionalModalDialog::DlgProc);
-		if(result == IDOK)
+		_TCHAR buff[256] = _T("");
+		int length = SendMessage(hEditSignUp[3], WM_GETTEXTLENGTH, 0, 0);
+		GetWindowText(hEditSignUp[3], buff, length + 1);
+
+		if (!isLoginExist(hwnd, buff)) 
 		{
+			int index = MessageBox(hwnd, _T("Хотите авторизоваться?"), _T("Такой логин уже есть!"), MB_YESNO);
 
+			if (index == IDYES) 
+			{
+				signInDlg dlg;
+				INT_PTR result = DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_DIALOG3), hwnd, signInDlg::DlgProc);
+			}
 
+			return;
 		}
-	}
-	else if(id == IDC_BUTTON2)
-	{
-		TCHAR buffer[200];
-		GetWindowText(hEdit2, buffer, 200);
-		CAdditionalModalDialog dlg(buffer);
-		INT_PTR result = DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_DIALOG2), hwnd, CAdditionalModalDialog::DlgProc);
-		if(result == IDOK)
+		tfstream out(TEXT("info.txt"), std::ios::app);
+
+		for (int i = 0; i < numEdit; i++) 
 		{
-			SetWindowText(hStatic2, dlg.text);
+			length = SendMessage(hEditSignUp[i], WM_GETTEXTLENGTH, 0, 0);
+
+			if (length == 0) 
+			{
+				MessageBox(hwnd, _T("Заполните все поля!"), _T("Info!"), 0);
+				break;
+			}
+
+			GetWindowText(hEditSignUp[i], buff, length + 1);
+
+			out << (i == 0 ? "[ " : (i != numEdit - 1 ? "" : " ")) << buff << (i != numEdit - 1 ? " | " : " ]\n");
+
 		}
 	}
 }
 
-BOOL CALLBACK CMainModalDialog::DlgProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK signUpDlg::DlgProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
-	switch(message)
+	switch (message) 
 	{
 		HANDLE_MSG(hwnd, WM_CLOSE, ptr->Cls_OnClose);
 		HANDLE_MSG(hwnd, WM_INITDIALOG, ptr->Cls_OnInitDialog);
 		HANDLE_MSG(hwnd, WM_COMMAND, ptr->Cls_OnCommand);
 	}
+
 	return FALSE;
+}
+
+bool signUpDlg::isLoginExist(HWND hwnd, const _TCHAR* login) 
+{
+	tifstream in("Database.txt");
+
+	const int max_size = 256;
+	int counter = 0;
+
+	tstring temp[5];
+	tstring tempChar;
+	int index = 0;
+
+	_TCHAR buff[max_size] = _T("");
+
+	do {
+		in >> buff[index];
+
+		if (buff[index] == ']') 
+		{
+			buff[index + 1] = '\0';
+
+			for (int j = 0; j < _tcslen(buff); j++) 
+			{
+				if (buff[j] != ' ' && buff[j] != '[' && buff[j] != '|' && buff[j] != ']') 
+				{
+					tempChar += buff[j];
+				}
+				else if (buff[j] == '|') 
+				{
+					temp[counter++] = tempChar;
+					tempChar = _T("");
+				}
+			}
+
+			tempChar = _T("");
+			counter = 0;
+			index = 0;
+		}
+		else {
+			index++;
+		}
+
+		if (_tcscmp(login, temp[3].c_str()) == 0)
+		{
+			return false;
+		}
+			
+	} while (in);
+
+	return true;
 }
